@@ -1,0 +1,143 @@
+---
+title: "ML Project"
+author: "rimagupta1234"
+date: "January 28, 2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r echo = FALSE}
+setwd("C:/Users/1023027/Desktop/DS Course")
+getwd()
+```
+
+```{r echo = FALSE}
+library(caret)
+library(randomForest)
+library(rpart)
+library(rpart.plot)
+library(RColorBrewer)
+library(rattle)
+library(ggplot2)
+set.seed(1000)
+```
+
+```{r echo = FALSE}
+##training data set
+trainUrl <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+##testing data set
+testUrl <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+
+##load the training data
+training <- read.csv(url(trainUrl), na.strings=c("NA","#DIV/0!",""))
+##load the testing data
+testing <- read.csv(url(testUrl), na.strings=c("NA","#DIV/0!",""))
+```
+
+
+```{r echo = FALSE}
+inTrain <- createDataPartition(training$classe, p = 0.7, list = FALSE)
+subTraining <- training[inTrain, ]
+subTesting <- training[-inTrain, ]
+dim(subTraining)
+```
+
+```{r echo = FALSE}
+
+dim(subTesting)
+subTraining <- subTraining[, -c(1:7)]
+subTraining <- subTraining[, -c(1:7)]
+
+```
+
+```{r echo = FALSE}
+##clean near zero variance variables
+NearZeroVar <- nearZeroVar(subTraining, saveMetrics = TRUE)
+subTraining <- subTraining[, NearZeroVar$nzv == FALSE]
+
+subTraining_clean <- subTraining
+for (i in 1:length(subTraining)){
+    if(sum(is.na(subTraining[, i]))/ nrow(subTraining) >= .6) {
+        for (j in 1:length(subTraining_clean)){
+            if(length(grep(names(subTraining[i]), names(subTraining_clean)[j])) == 1){
+                subTraining_clean <- subTraining_clean[, -j]
+            }
+        }
+    }
+}
+
+subTraining <- subTraining_clean
+
+##clean the subtesting data set
+clean1 <- colnames(subTraining)
+subTesting <- subTesting[clean1]
+
+##clean the testing data set (already with column Classe removed)
+clean2 <- colnames(subTraining[, -53])
+testing <- testing[clean2]
+
+```
+
+
+```{r echo = FALSE}
+##create the model with randomForest function
+modFit_rf <- randomForest(classe ~., data = subTraining)
+
+##calculate predicted values 
+pred_rf <- predict(modFit_rf, subTesting)
+
+##calculate confusion matrix
+cm_rf <- confusionMatrix(pred_rf, subTesting$classe)
+print(cm_rf)
+```
+
+```{r echo = FALSE}
+plot(modFit_rf)
+```
+
+```{r echo = FALSE}
+## Model with Decision tree
+
+modFit_dt <- rpart(classe ~., data = subTraining, method = "class")
+
+##calculate predicted values
+pred_dt <- predict(modFit_dt, subTesting, type = "class")
+
+##calculate the confusion matrix
+cm_dt <- confusionMatrix(pred_dt, subTesting$classe)
+print(cm_dt)
+
+```
+
+```{r echo = FALSE}
+##Final prediction
+
+finalPred <- predict(modFit_rf, testing, type = "class")
+print(finalPred)
+```
+
+
+
